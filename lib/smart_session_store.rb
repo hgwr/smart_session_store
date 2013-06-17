@@ -37,7 +37,6 @@ class SmartSessionStore < ActionController::Session::AbstractStore
   def set_session(env, sid, session_data)
     ActiveRecord::Base.silence do
       record = env[SESSION_RECORD_KEY] ||= find_session(sid)
-
       data, session = save_session(record, session_data)
       env[SESSION_RECORD_KEY] = session
     end
@@ -46,10 +45,13 @@ class SmartSessionStore < ActionController::Session::AbstractStore
   end
 
   def find_session(id)
-    @@session_class.find_by_session_id(id) ||
-      @@session_class.new(:session_id => id, :data => marshalize({}))
+    @@session_class.find_session(id) || @@session_class.new(id, marshalize({}))
   end
-    
+
+  def destroy(env)
+    env[SESSION_RECORD_KEY].destroy
+    env[SESSION_RECORD_KEY] = nil
+  end
 end
 
 __END__

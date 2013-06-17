@@ -39,7 +39,8 @@ class PostgresqlSession
     def find_session(session_id, lock = false)
       connection = session_connection
       quoted_session_id = connection.quote(session_id)
-      result = connection.query("SELECT id, data FROM sessions WHERE session_id=#{quoted_session_id} LIMIT 1"  + (lock ? ' FOR UPDATE' : '') )
+      result = connection.execute("SELECT id, data FROM sessions WHERE session_id=#{quoted_session_id} LIMIT 1"  + (lock ? ' FOR UPDATE' : '') )
+      result = connection.result_as_array(result)
       my_session = nil
 
       if result[0] && result[0].size == 2
@@ -61,9 +62,9 @@ class PostgresqlSession
     # caller's responsibility to pass a valid sql condition
     def delete_all(condition=nil)
       if condition
-        session_connection.query("DELETE FROM sessions WHERE #{condition}")
+        session_connection.execute("DELETE FROM sessions WHERE #{condition}")
       else
-        session_connection.query("DELETE FROM sessions")
+        session_connection.execute("DELETE FROM sessions")
       end
     end
 
@@ -79,12 +80,12 @@ class PostgresqlSession
     if @id
       # if @id is not nil, this is a session already stored in the database
       # update the relevant field using @id as key
-      connection.query("UPDATE sessions SET \"updated_at\"=NOW(), \"data\"=#{quoted_data} WHERE id=#{@id}")
+      connection.execute("UPDATE sessions SET \"updated_at\"=NOW(), \"data\"=#{quoted_data} WHERE id=#{@id}")
     else
       # if @id is nil, we need to create a new session in the database
       # and set @id to the primary key of the inserted record
-      connection.query("INSERT INTO sessions (\"updated_at\", \"session_id\", \"data\") VALUES (NOW(), #{@quoted_session_id}, #{quoted_data})")
-      @id = connection.lastval rescue connection.query("select lastval()")[0][0].to_i
+      connection.execute("INSERT INTO sessions (\"updated_at\", \"session_id\", \"data\") VALUES (NOW(), #{@quoted_session_id}, #{quoted_data})")
+      @id = connection.lastval rescue connection.execute("select lastval()")[0][0].to_i
     end
   end
 
